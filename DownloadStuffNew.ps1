@@ -4,7 +4,7 @@ function Get-ScriptDirectory
   $Invocation = (Get-Variable MyInvocation -Scope 1).Value
   Split-Path $Invocation.MyCommand.Path
 }
-$CurrentCatalog = Get-ScriptDirectory #uruchamiać w trybie nienadzorowanych.
+$CurrentCatalog = Get-ScriptDirectory #uruchamiać w trybie nienadzorowanym.
 #$CurrentCatalog = "C:\scripts\DownloadAppsNew"
 $path = Get-Content -Path $CurrentCatalog\variableList.json | ConvertFrom-Json
 
@@ -38,7 +38,6 @@ function download-Soft {
         }
      }     
 }
-
 
 function download-Firefox { 
     param (
@@ -112,10 +111,11 @@ function download-PemHeart {
     $AppName = "Pem-Heart"
     $ext = ".exe"
     $downloadUri = ((invoke-webrequest -uri "https://www.cencert.pl/do-pobrania/oprogramowanie-do-podpisu/").links | ForEach-Object {
-        $_ | Where-Object {($_.href -like "*.exe") -and ($_.href -like "*www.cencert.pl/*")}
-    }).href
+        $_ | Where-Object {($_.href -like "*.exe") -and ($_.href -like "*software*")}
+    }).href | Select -First 1
+    $downloadUri = "https://www.cencert.pl" + $downloadUri
     $latestVersion = (($downloadUri.Replace("https://www.cencert.pl/wp-content/software/PH-",""))).Replace(".exe","")
-    download-Soft -path $DownloadPath -Name $AppName -ext $ext -logFile $logFile -LogPath $LogPath -downloadUri $downloadUri -latestVersion $latestVersion
+    download-Soft -path $DownloadPath -Name $AppName -ext $ext -logFile $logFile -LogPath $LogPath -downloadUri $downloadUri -latestVersion $latestVersion 
 }
 
 function download-AcrobatReaderDC {
@@ -147,6 +147,9 @@ function download-WinSCP {
     }
     $downloadUri = ("https://winscp.net" + $($downloadUri.Replace('<a href="','') -replace '" class.*','')).Replace(' ','')
     $latestVersion = ($downloadUri.Replace('https://winscp.net/download/WinSCP-','')).Replace('-Setup.exe','')
+    $downloadUri = ((Invoke-WebRequest -Uri $downloadUri -UseBasicParsing).links | ForEach-Object { #jakiś skrypt otwiera na stronie uruchamia pobieranie dlatego ten dodatkowy zabieg
+        $_ | Where-Object { $_.href -like "*$latestVersion-Setup.exe" }
+    }).href
     download-Soft -path $DownloadPath -Name $AppName -ext $ext -logFile $logFile -LogPath $LogPath -downloadUri $downloadUri -latestVersion $latestVersion
 }
 
@@ -166,7 +169,6 @@ function download-Szafir {
     $downloadUri ="https://www.elektronicznypodpis.pl" + $downloadUri
     download-Soft -path $DownloadPath -Name $AppName -ext $ext -logFile $logFile -LogPath $LogPath -downloadUri $downloadUri -latestVersion $latestVersion
 }
-
 
 function Gather-Info {
     param (
@@ -204,7 +206,7 @@ download-AcrobatReaderDC -path $path -logFile $logFile
 download-WinSCP -path $path -logFile $logFile
 download-Szafir -path $path -logFile $logFile
 
-Import-Module "C:\scripts\Modules\SendMail.psm1"
+Import-Module "$($path.SendMailModulePath)\SendMail.psm1"
 $VariableList =  Get-Content -Path "$CurrentCatalog\mailvariablelist.json"
 $VariableList = $VariableList | ConvertFrom-Json
 $LogPath = $path.LogLocation
@@ -214,9 +216,3 @@ if(Test-Path -Path "$LogPath\$logFile"){
     Get-Mail -args $VariableList -Body $body
     ClearLogs -path $path
 }
-
-$downloadUri = ((Invoke-WebRequest "https://www.elektronicznypodpis.pl/informacje/aplikacje/").links | ForEach-Object {
-    $_ | Where-Object {$_ -like "*x64_jre11.msi*"}
-}).href
-$latestVersion = (($downloadUri.Replace('/gfx/elektronicznypodpis/userfiles/szafirsdk/szafir/instalator/szafir_','')).Replace('_x64_jre11.msi','')).Replace('_',' ')
-$downloadUri ="https://www.elektronicznypodpis.pl" + $downloadUri
