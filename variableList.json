@@ -1,4 +1,5 @@
 {
+	"SendMailModulePath": "c:\\Scripts\\Modules",
     	"LogLocation":  "c:\\Scripts\\Install",
 	"ErrorLogLocation": "c:\\Scripts",
     	"FirefoxOutputLocation":  "c:\\Scripts\\Install",
